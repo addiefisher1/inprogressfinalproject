@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pac-Man with Ghosts</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: black;
+      font-family: Arial, sans-serif;
+    }
+
+    #gameBoard {
+      display: grid;
+      grid-template-columns: repeat(20, 20px);
+      grid-template-rows: repeat(20, 20px);
+      gap: 2px;
+      background-color: #222;
+      border: 2px solid #fff;
+    }
+
+    .cell {
+      width: 20px;
+      height: 20px;
+      background-color: black;
+      position: relative;
+    }
+
+    .dot {
+      background-color: yellow;
+      border-radius: 50%;
+      margin: auto;
+      width: 10px;
+      height: 10px;
+    }
+
+    .pacman {
+      background-color: yellow;
+      border-radius: 50%;
+    }
+
+    .ghost {
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      position: absolute;
+      top: 1px;
+      left: 1px;
+    }
+
+    .ghost.red { background-color: red; }
+    .ghost.blue { background-color: blue; }
+    .ghost.green { background-color: green; }
+    .ghost.pink { background-color: pink; }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <div id="gameBoard"></div>
+
+  <script>
+    const gameBoard = document.getElementById('gameBoard');
+    const scoreDisplay = document.getElementById('score');
+
+    const gridSize = 20; // 20x20 grid
+    const totalCells = gridSize * gridSize;
+    let score = 0;
+    let gameOver = false;
+
+    // Create the grid
+    const cells = [];
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      if (Math.random() > 0.2) {
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        cell.appendChild(dot);
+      }
+      cells.push(cell);
+      gameBoard.appendChild(cell);
+    }
+
+    // Pac-Man starting position
+    let pacmanIndex = Math.floor(totalCells / 2);
+    cells[pacmanIndex].classList.add('pacman');
+
+    // Ghosts
+    const ghostCount = 4;
+    const ghostColors = ['red', 'blue', 'green', 'pink'];
+    const ghosts = [];
+    for (let i = 0; i < ghostCount; i++) {
+      let ghostIndex;
+      do {
+        ghostIndex = Math.floor(Math.random() * totalCells);
+      } while (
+        ghostIndex === pacmanIndex || 
+        cells[ghostIndex].querySelector('.dot') === null || 
+        cells[ghostIndex].classList.contains('ghost')
+      );
+      
+      const ghost = { index: ghostIndex, direction: 1 };
+      cells[ghostIndex].classList.add('ghost', ghostColors[i]);
+      ghosts.push(ghost);
+    }
+
+    // Movement
+    let direction = 0; // 0: no movement
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowUp': direction = -gridSize; break; // Move up
+        case 'ArrowDown': direction = gridSize; break; // Move down
+        case 'ArrowLeft': direction = -1; break; // Move left
+        case 'ArrowRight': direction = 1; break; // Move right
+      }
+    });
+
+    function movePacman() {
+      if (gameOver) return;
+
+      // Remove Pac-Man from the current position
+      cells[pacmanIndex].classList.remove('pacman');
+
+      // Calculate new position
+      const newPosition = pacmanIndex + direction;
+      const row = Math.floor(newPosition / gridSize);
+      const column = newPosition % gridSize;
+
+      // Check for grid boundaries
+      if (
+        newPosition < 0 || 
+        newPosition >= totalCells || 
+        (direction === -1 && column === gridSize - 1) || 
+        (direction === 1 && column === 0)
+      ) {
+        direction = 0;
+      } else {
+        pacmanIndex = newPosition;
+      }
+
+      // Eat dots and update score
+      const cell = cells[pacmanIndex];
+      const dot = cell.querySelector('.dot');
+      if (dot) {
+        dot.remove();
+        score++;
+        scoreDisplay.textContent = `Score: ${score}`;
+      }
+
+      // Check collision with ghosts
+      if (cell.classList.contains('ghost')) {
+        alert(`Game Over! Final Score: ${score}`);
+        gameOver = true;
+        return;
+      }
+
+      // Place Pac-Man in the new position
+      cells[pacmanIndex].classList.add('pacman');
+    }
+
+    function moveGhosts() {
+      if (gameOver) return;
+
+      ghosts.forEach(ghost => {
+        // Remove ghost from current position
+        cells[ghost.index].classList.remove('ghost', ...ghostColors);
+
+        // Randomly choose a direction
+        const directions = [-1, 1, -gridSize, gridSize];
+        let newDirection;
+        let newIndex;
+        do {
+          newDirection = directions[Math.floor(Math.random() * directions.length)];
+          newIndex = ghost.index + newDirection;
+
+          const row = Math.floor(newIndex / gridSize);
+          const column = newIndex % gridSize;
+        } while (
+          newIndex < 0 || 
+          newIndex >= totalCells || 
+          (newDirection === -1 && column === gridSize - 1) || 
+          (newDirection === 1 && column === 0)
+        );
+
+        ghost.index = newIndex;
+
+        // Check if ghost catches Pac-Man
+        if (ghost.index === pacmanIndex) {
+          alert(`Game Over! Final Score: ${score}`);
+          gameOver = true;
+          return;
+        }
+
+        // Place ghost in the new position
+        cells[ghost.index].classList.add('ghost', ghostColors[ghosts.indexOf(ghost)]);
+      });
+    }
+
+    function gameLoop() {
+      if (gameOver) return;
+      movePacman();
+      moveGhosts();
+      setTimeout(gameLoop, 200); // Adjust speed here
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
